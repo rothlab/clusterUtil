@@ -17,6 +17,10 @@ Usage: pacbioCCS.sh [-v|--verbose] [-i|--interval <SECONDS>]
 -i|--interval : Time interval between checks in seconds. 
 <JOBS>        : comma-separated list of job IDs. For example 12345,12346
 
+Tip: To capture the job ID of a job submission you can use:
+RETVAL=$(submitjob.sh myJob.sh)
+JOBID=${RETVAL##* }
+
 EOF
  exit $1
 }
