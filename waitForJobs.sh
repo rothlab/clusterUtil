@@ -2,7 +2,7 @@
 
 #helper function to print usage information
 usage () {
-  cat << EOF
+  cat << "EOF"
 
 waitForJobs.sh v0.0.1 
 
