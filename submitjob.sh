@@ -7,6 +7,9 @@ TIME="01:00:00"
 JOBNAME=${USER}$(date +%Y%m%d%H%M%S)
 CPUS="1"
 MEM="1G"
+WHITELIST=""
+QUEUE="guest"
+
 LOG=${LOGDIR}/${JOBNAME}.out
 ERRLOG=${LOGDIR}/${JOBNAME}.err
 SCRIPT=${LOGDIR}/${JOBNAME}.sh
@@ -33,6 +36,9 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
             <JOBNAME>.out in log directory ${LOGDIR}.
 -e|--err  : Error file, to which STDERR will be written. Defaults to 
             <JOBNAME>.err in log directory ${LOGDIR}.
+-w|--whitelist : Comma-separate whitelist of nodes to use. If none
+            is provided, all nodes are used.
+-q|--queue : Which queue to use. Defaults to ${QUEUE}
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
 <CMD>     : The command to execute
@@ -119,6 +125,24 @@ while (( "$#" )); do
         usage 1
       fi
       ;;
+    -w|--whitelist)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        WHITELIST=$2
+        shift 2
+      else
+        echo "ERROR: Argument for $1 is missing" >&2
+        usage 1
+      fi
+      ;;
+    -q|--queue)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        QUEUE=$2
+        shift 2
+      else
+        echo "ERROR: Argument for $1 is missing" >&2
+        usage 1
+      fi
+      ;;
     --) # end of options indicates that the main command follows
       shift
       CMD=$@
@@ -146,8 +170,12 @@ echo "#SBATCH --time=$TIME">>$SCRIPT
 echo "#SBATCH --job-name=$JOBNAME">>$SCRIPT
 echo "#SBATCH --cpus-per-task=$CPUS">>$SCRIPT
 echo "#SBATCH --mem=$MEM">>$SCRIPT
+echo "#SBATCH --partition=$QUEUE">>$SCRIPT
 echo "#SBATCH --error=$ERRLOG">>$SCRIPT
 echo "#SBATCH --output=$LOG">>$SCRIPT
+if ! [[ -z $WHITELIST ]]; then
+  echo "#SBATCH --nodelist=$WHITELIST">>$SCRIPT
+fi
 echo "$CMD">>$SCRIPT
 
 #and submit
