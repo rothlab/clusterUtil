@@ -7,7 +7,7 @@ TIME="01:00:00"
 JOBNAME=${USER}$(date +%Y%m%d%H%M%S)
 CPUS="1"
 MEM="1G"
-WHITELIST=""
+BLACKLIST=""
 QUEUE="guest"
 
 LOG=${LOGDIR}/${JOBNAME}.out
@@ -36,8 +36,8 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
             <JOBNAME>.out in log directory ${LOGDIR}.
 -e|--err  : Error file, to which STDERR will be written. Defaults to 
             <JOBNAME>.err in log directory ${LOGDIR}.
--w|--whitelist : Comma-separate whitelist of nodes to use. If none
-            is provided, all nodes are used.
+-b|--blacklist : Comma-separated black-list of nodes not to use. If none
+            is provided, all nodes are allowed.
 -q|--queue : Which queue to use. Defaults to ${QUEUE}
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
@@ -125,9 +125,9 @@ while (( "$#" )); do
         usage 1
       fi
       ;;
-    -w|--whitelist)
+    -b|--blacklist)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
-        WHITELIST=$2
+        BLACKLIST=$2
         shift 2
       else
         echo "ERROR: Argument for $1 is missing" >&2
@@ -173,8 +173,8 @@ echo "#SBATCH --mem=$MEM">>$SCRIPT
 echo "#SBATCH --partition=$QUEUE">>$SCRIPT
 echo "#SBATCH --error=$ERRLOG">>$SCRIPT
 echo "#SBATCH --output=$LOG">>$SCRIPT
-if ! [[ -z $WHITELIST ]]; then
-  echo "#SBATCH --nodelist=$WHITELIST">>$SCRIPT
+if ! [[ -z $BLACKLIST ]]; then
+  echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
 echo "$CMD">>$SCRIPT
 
