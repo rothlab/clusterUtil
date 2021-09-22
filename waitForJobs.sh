@@ -119,4 +119,4 @@ while (( $CURRJOBNUM > 0 )); do
   fi
 done
 
-echo "Done!"
+printf "\rDone!           \n"
