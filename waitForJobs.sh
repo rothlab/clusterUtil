@@ -14,7 +14,7 @@ Usage: pacbioCCS.sh [-v|--verbose] [-i|--interval <SECONDS>]
 
 -v|--verbose  : Print number of remaining jobs every interval.
 -h|--help     : Show this help message.
--i|--interval : Time interval between checks in seconds. 
+-i|--interval : Time interval between checks in seconds. (Default 5)
 <JOBS>        : comma-separated list of job IDs. For example 12345,12346
 
 Tip: To capture the job ID of a job submission you can use:
@@ -92,9 +92,12 @@ fi
 if [[ $VERBOSE == 1 ]]; then
   echo "Waiting for jobs to finish..."
 fi
+#print extra newline to make room for job counter
+echo ""
 
 #the number of currently active jobs (with 1 pseudo-job to begin with)
 CURRJOBNUM=1
+CYCLE=0
 while (( $CURRJOBNUM > 0 )); do
   sleep $INTERVAL
   if [ -z "$JOBS" ]; then
@@ -104,6 +107,16 @@ while (( $CURRJOBNUM > 0 )); do
   fi
 
   if [[ $VERBOSE == 1 ]]; then
-    echo "$CURRJOBNUM jobs remaining"
+    printf "\r$CURRJOBNUM jobs remaining "
+    #draw waiting animation
+    CYCLE=$(( ($CYCLE+1) % 4))
+    case $(($CYCLE % 4)) in
+      0) printf "\u2514";;
+      1) printf "\u250C";;
+      2) printf "\u2510";;
+      3) printf "\u2518";;
+    esac
   fi
 done
+
+echo "Done!"
