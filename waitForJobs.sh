@@ -111,12 +111,12 @@ while (( $CURRJOBNUM > 0 )); do
     #draw waiting animation
     CYCLE=$(( ($CYCLE+1) % 4))
     case $(($CYCLE % 4)) in
-      0) printf "\u2514";;
-      1) printf "\u250C";;
-      2) printf "\u2510";;
-      3) printf "\u2518";;
+      0) printf "\u2514   ";;
+      1) printf "\u250C   ";;
+      2) printf "\u2510   ";;
+      3) printf "\u2518   ";;
     esac
   fi
 done
 
-printf "\rDone!           \n"
+printf "\rDone!              \n"
