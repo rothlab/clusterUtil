@@ -1,0 +1,16 @@
+
+cleanSlurmLogs() {
+  LOGDIR=$HOME/slurmlogs
+  DAYS=${1:-13}
+  find $LOGDIR -type f -mtime +$DAYS -delete
+}
+
+slogin() {
+  if [[ -z $1 ]]; then
+    srun --pty bash
+  else
+    srun --pty -w $1 /bin/bash
+  fi
+}
+
+alias deleteallmyjobs="scancel -u $USER"
