@@ -95,15 +95,28 @@ fi
 #print extra newline to make room for job counter
 echo ""
 
+#launch failed requeued held
+TMPFILE=$(mktemp)
+
 #the number of currently active jobs (with 1 pseudo-job to begin with)
 CURRJOBNUM=1
 CYCLE=0
 while (( $CURRJOBNUM > 0 )); do
   sleep $INTERVAL
   if [ -z "$JOBS" ]; then
-    CURRJOBNUM=$(squeue -hu $USER|wc -l)
+    squeue -hu $USER>$TMPFILE
   else
-    CURRJOBNUM=$(squeue -hu $USER -j${JOBS}|wc -l)
+    squeue -hu $USER -j${JOBS}>$TMPFILE
+  fi
+
+  CURRJOBNUM=$(cat $TMPFILE|wc -l)
+  STUCK=$(cat $TMPFILE|grep 'launch failed requeued held'|tr -s ' '|cut -f 2 -d ' '|tr '\n' ',')
+
+  if ! [[ -z "$STUCK" ]]; then
+    if [[ $VERBOSE == 1 ]]; then
+      printf "\rWARNING: stuck jobs! Attempting to release...\n"
+    fi
+    scontrol release "$STUCK"
   fi
 
   if [[ $VERBOSE == 1 ]]; then
@@ -118,5 +131,8 @@ while (( $CURRJOBNUM > 0 )); do
     esac
   fi
 done
+
+#clean up
+rm $TMPFILE
 
 printf "\rDone!              \n"
