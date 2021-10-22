@@ -102,23 +102,40 @@ TMPFILE=$(mktemp)
 CURRJOBNUM=1
 CYCLE=0
 while (( $CURRJOBNUM > 0 )); do
+  #wait for time interval
   sleep $INTERVAL
+
+  # query job information
   if [ -z "$JOBS" ]; then
-    squeue -hu $USER>$TMPFILE
+    #output fields: jobid, jobname, status, reason
+    squeue -hu $USER -o "%i %30j %t %R">$TMPFILE
   else
-    squeue -hu $USER -j${JOBS}>$TMPFILE
+    squeue -hu $USER -j${JOBS} -o "%i %30j %t %R">$TMPFILE
   fi
 
+  #count number of jobs
   CURRJOBNUM=$(cat $TMPFILE|wc -l)
-  STUCK=$(cat $TMPFILE|grep 'launch failed requeued held'|tr -s ' '|cut -f 2 -d ' '|tr '\n' ',')
 
+  #check if any are stuck ('held') and release if necessary
+  # STUCK=$(cat $TMPFILE|grep 'launch failed requeued held'|tr -s ' ' '\t'|cut -f 1|tr '\n' ',')
+  STUCK=$(grep 'launch failed requeued held' $TMPFILE|awk '{print $1}'|tr '\n' ',')
   if ! [[ -z "$STUCK" ]]; then
     if [[ $VERBOSE == 1 ]]; then
-      printf "\rWARNING: stuck jobs! Attempting to release...\n"
+      printf "\rWARNING: Failed/Held jobs detected! Attempting to release...\n"
     fi
     scontrol release "$STUCK"
   fi
 
+  #check if any are suspended and requeue if necessary
+  SUSPENDED=$(awk '{if ($3 =="S"){print $1}}' $TMPFILE|tr '\n' ',')
+   if ! [[ -z "$SUSPENDED" ]]; then
+    if [[ $VERBOSE == 1 ]]; then
+      printf "\rWARNING: Suspended jobs detected! Requeuing...\n"
+    fi
+    scontrol requeue "$SUSPENDED"
+  fi
+
+  #Print status update (if verbose)
   if [[ $VERBOSE == 1 ]]; then
     printf "\r$CURRJOBNUM jobs remaining "
     #draw waiting animation
@@ -130,6 +147,7 @@ while (( $CURRJOBNUM > 0 )); do
       3) printf "\u2518   ";;
     esac
   fi
+
 done
 
 #clean up
