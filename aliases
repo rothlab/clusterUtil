@@ -1,8 +1,8 @@
 #!/bin/bash
-if [[ -w ${HOME}/.bash_aliases ]]
+if [[ -w ${HOME}/.bash_aliases ]]; then
   BRC=${HOME}/.bashrc
 #check if .bash_aliases or .bashrc are writable
-elif [[ -w ${HOME}/.bashrc ]]
+elif [[ -w ${HOME}/.bashrc ]]; then
   BRC=${HOME}/.bashrc
 else
   echo "ERROR: Cannot write to .bash_alias or .bashrc!"
