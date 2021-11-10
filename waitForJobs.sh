@@ -90,12 +90,12 @@ if [[ $INTERVAL < 1 ]]; then
 fi
 
 if [[ $VERBOSE == 1 ]]; then
-  echo "Waiting for jobs to finish..."
+  echo "$(date) INFO: Waiting for jobs to finish..."
 fi
 #print extra newline to make room for job counter
 echo ""
 
-#launch failed requeued held
+#create temporary file for squeue output
 TMPFILE=$(mktemp)
 
 #the number of currently active jobs (with 1 pseudo-job to begin with)
@@ -121,7 +121,7 @@ while (( $CURRJOBNUM > 0 )); do
   STUCK=$(grep 'launch failed requeued held' $TMPFILE|awk '{print $1}'|tr '\n' ',')
   if ! [[ -z "$STUCK" ]]; then
     if [[ $VERBOSE == 1 ]]; then
-      printf "\rWARNING: Failed/Held jobs detected! Attempting to release...\n"
+      printf "\r$(date) WARNING: Failed/Held jobs detected! Attempting to release...\n"
     fi
     scontrol release "$STUCK"
   fi
@@ -130,7 +130,7 @@ while (( $CURRJOBNUM > 0 )); do
   SUSPENDED=$(awk '{if ($3 =="S"){print $1}}' $TMPFILE|tr '\n' ',')
    if ! [[ -z "$SUSPENDED" ]]; then
     if [[ $VERBOSE == 1 ]]; then
-      printf "\rWARNING: Suspended jobs detected! Requeuing...\n"
+      printf "\r$(date) WARNING: Suspended jobs detected! Requeuing...\n"
     fi
     scontrol requeue "$SUSPENDED"
   fi
@@ -153,4 +153,6 @@ done
 #clean up
 rm $TMPFILE
 
-printf "\rDone!              \n"
+if [[ $VERBOSE == 1 ]]; then
+  printf "\r$(date) INFO: Done!              \n"
+fi

@@ -1,4 +1,17 @@
+#!/bin/bash
+if [[ -w ${HOME}/.bash_aliases ]]
+  BRC=${HOME}/.bashrc
+#check if .bash_aliases or .bashrc are writable
+elif [[ -w ${HOME}/.bashrc ]]
+  BRC=${HOME}/.bashrc
+else
+  echo "ERROR: Cannot write to .bash_alias or .bashrc!"
+  exit 1
+fi
 
+#define content of actual aliases
+read -r -d '' CONTENT <<'EOF'
+# >>> clusterUtil >>>
 cleanSlurmLogs() {
   LOGDIR=$HOME/slurmlogs
   DAYS=${1:-13}
@@ -14,3 +27,32 @@ slogin() {
 }
 
 alias deleteallmyjobs="scancel -u $USER"
+# <<< clusterUtil <<<
+EOF
+
+#make a backup of the old file
+cp $BRC "${BRC}.bak"
+echo "Made a backup copy of $(basename $BRC) : ${BRC}.bak"
+
+#if no prior version of the content exists
+if ! grep -q '>>> clusterUtil >>>' $BRC ; then
+  #add it to the end
+  echo "Appending aliases to $BRC"
+  echo "$CONTENT">>$BRC 
+else
+  #otherwise, replace it
+  echo "Replacing pre-existing aliases in $BRC"
+  START=$(grep -n '>>> clusterUtil >>>' $BRC|cut -f 1 -d :)
+  END=$(grep -n '<<< clusterUtil <<<' $BRC|cut -f 1 -d :)
+  if [[ $END > $START ]]; then
+    TMPFILE=$(mktemp)
+    head -n $((START-1)) "${BRC}.bak">$TMPFILE
+    echo "$CONTENT">>$TMPFILE
+    tail -n +$((END+1)) "${BRC}.bak">$TMPFILE
+    cp $TMPFILE $BRC
+    rm $TMPFILE
+  else
+    echo "ERROR: Invalid clusterUtil section in $BRC !"
+    exit 1
+  fi
+fi
