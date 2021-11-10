@@ -48,7 +48,7 @@ else
     TMPFILE=$(mktemp)
     head -n $((START-1)) "${BRC}.bak">$TMPFILE
     echo "$CONTENT">>$TMPFILE
-    tail -n +$((END+1)) "${BRC}.bak">$TMPFILE
+    tail -n +$((END+1)) "${BRC}.bak">>$TMPFILE
     cp $TMPFILE $BRC
     rm $TMPFILE
   else
