@@ -27,6 +27,11 @@ slogin() {
 }
 
 alias deleteallmyjobs="scancel -u $USER"
+
+alias listnodes="sinfo -Nl"
+
+alias showjob="scontrol show job"
+
 # <<< clusterUtil <<<
 EOF
 
