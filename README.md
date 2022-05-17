@@ -22,3 +22,16 @@ waitForJobs - wait for all (or a list of) my jobs and monitor for suspensions an
 cleanSlurmLogs - delete logs older than 2 weeks
 
 deleteAllMyJobs - cancel all my currently running or scheduled jobs
+
+## Examples
+
+```bash
+JOBS=""
+for SCRIPT in $SCRIPTS; do
+  RETVAL=$(submitjob.sh $SCRIPT)
+  JOBID=${RETVAL##* }
+  JOBS=${JOBS},$JOBID
+done
+waitForJobs.sh $JOBS
+```
+
