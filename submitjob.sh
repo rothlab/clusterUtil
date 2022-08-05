@@ -4,7 +4,9 @@
 #change as desired below
 LOGDIR=$HOME/slurmlogs
 TIME="01:00:00"
-JOBNAME=${USER}$(date +%Y%m%d%H%M%S)
+DATETIME=$(date +%Y%m%d%H%M%S)
+ALPHATAG=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 8)
+JOBNAME="${USER}_${DATETIME}_$ALPHATAG"
 CPUS="1"
 MEM="1G"
 BLACKLIST=""
@@ -25,9 +27,9 @@ by Jochen Weile <jochenweile@gmail.com> 2021
 Submits a new slurm job
 Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>] 
     [-c|cpus <NUMCPUS>] [-m|--mem <MEMORY>] [-l|--log <LOGFILE>] 
-    [-e|--err <ERROR_LOGFILE>] [--] <CMD>
+    [-e|--err <ERROR_LOGFILE>] [--conda <ENV>] [--] <CMD>
 
--n|--name : Job name. Defaults to ${USER}_<TIMESTAMP>
+-n|--name : Job name. Defaults to ${USER}_<TIMESTAMP>_<RANDOMSTRING>
 -t|--time : Maximum (wall-)runtime for this job in format HH:MM:SS.
             Defaults to ${TIME}
 -c|--cpus : Number of CPUs required for this job. Defaults to ${CPUS}
@@ -39,6 +41,7 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
 -b|--blacklist : Comma-separated black-list of nodes not to use. If none
             is provided, all nodes are allowed.
 -q|--queue : Which queue to use. Defaults to ${QUEUE}
+--conda   : activate given conda environment for job
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
 <CMD>     : The command to execute
@@ -143,6 +146,15 @@ while (( "$#" )); do
         usage 1
       fi
       ;;
+    --conda)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        CONDAENV=$2
+        shift 2
+      else
+        echo "ERROR: Argument for $1 is missing" >&2
+        usage 1
+      fi
+      ;;
     --) # end of options indicates that the main command follows
       shift
       CMD=$@
@@ -161,6 +173,16 @@ while (( "$#" )); do
   esac
 done
 
+#check if requested conda environment exists
+if ! [[ -z "$CONDAENV" ]]; then
+  if conda env list|grep "$CONDAENV"; then
+    echo "Successfully identified environment '$CONDAENV'"
+  else
+    echo "Environment '$CONDAENV' does not exist!">&2
+    exit 1
+  fi
+fi
+
 #create logdir if it doesn't exist
 mkdir -p $LOGDIR
 
@@ -176,7 +198,14 @@ echo "#SBATCH --output=$LOG">>$SCRIPT
 if ! [[ -z $BLACKLIST ]]; then
   echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
+if ! [[ -z "$CONDAENV" ]]; then
+  echo "source $CONDA_PREFIX/etc/profile.d/conda.sh">>$SCRIPT
+  echo "conda activate $CONDAENV">>$SCRIPT
+fi
 echo "$CMD">>$SCRIPT
+if ! [[ -z "$CONDAENV" ]]; then
+  echo "conda deactivate">>$SCRIPT
+fi
 
 #and submit
 sbatch $SCRIPT
