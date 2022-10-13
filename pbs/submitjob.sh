@@ -2,7 +2,7 @@
 
 #DEFAULT PARAMETERS
 #change as desired below
-LOGDIR=$HOME/slurmlogs
+LOGDIR=$HOME/pbslogs
 TIME="01:00:00"
 DATETIME=$(date +%Y%m%d%H%M%S)
 ALPHATAG=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 8)
@@ -10,7 +10,7 @@ JOBNAME="${USER}_${DATETIME}_$ALPHATAG"
 CPUS="1"
 MEM="1G"
 BLACKLIST=""
-QUEUE="guest"
+QUEUE=""
 
 LOG=${LOGDIR}/${JOBNAME}.out
 ERRLOG=${LOGDIR}/${JOBNAME}.err
@@ -24,7 +24,7 @@ submitjob.sh v0.0.1
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
-Submits a new slurm job
+Submits a new PBS job
 Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>] 
     [-c|cpus <NUMCPUS>] [-m|--mem <MEMORY>] [-l|--log <LOGFILE>] 
     [-e|--err <ERROR_LOGFILE>] [--conda <ENV>] [--] <CMD>
@@ -40,7 +40,7 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
             <JOBNAME>.err in log directory ${LOGDIR}.
 -b|--blacklist : Comma-separated black-list of nodes not to use. If none
             is provided, all nodes are allowed.
--q|--queue : Which queue to use. Defaults to ${QUEUE}
+-q|--queue : Which queue to use. Defaults to default queue
 --conda   : activate given conda environment for job
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
@@ -55,16 +55,17 @@ EOF
  exit $1
 }
 
-#check if slurm is installed
-SLURM_PATH=$(which sbatch)
-if [ -x "$SLURM_PATH" ] ; then
-  echo "Slurm detected at: $SLURM_PATH"
+#check if PBS is installed
+PBS_PATH=$(which qsub)
+if [ -x "$PBS_PATH" ] ; then
+  echo "PBS detected at: $PBS_PATH"
 else
-  >&2 echo "#########################################"
-  >&2 echo "ERROR: Slurm appears to not be installed!"
-  >&2 echo "#########################################"
+  >&2 echo "##########################################"
+  >&2 echo "ERROR: PBS doesn't appear to be installed!"
+  >&2 echo "##########################################"
   usage 1
 fi
+
 
 #Parse Arguments
 PARAMS=""
@@ -183,21 +184,26 @@ if ! [[ -z "$CONDAENV" ]]; then
   fi
 fi
 
+if ! [[ -z $BLACKLIST ]]; then
+  echo "WARNING: Blacklisting is not currently supported for PBS"
+fi
+
 #create logdir if it doesn't exist
 mkdir -p $LOGDIR
 
-#write the slurm submission script
+#write the PBS submission script
 echo "#!/bin/bash">$SCRIPT
-echo "#SBATCH --time=$TIME">>$SCRIPT
-echo "#SBATCH --job-name=$JOBNAME">>$SCRIPT
-echo "#SBATCH --cpus-per-task=$CPUS">>$SCRIPT
-echo "#SBATCH --mem=$MEM">>$SCRIPT
-echo "#SBATCH --partition=$QUEUE">>$SCRIPT
-echo "#SBATCH --error=$ERRLOG">>$SCRIPT
-echo "#SBATCH --output=$LOG">>$SCRIPT
-if ! [[ -z $BLACKLIST ]]; then
-  echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
+echo "#PBS -S /bin/bash">>$SCRIPT
+echo "#PBS -N $JOBNAME">>$SCRIPT
+echo "#PBS -l nodes=1:ppn=$CPUS,walltime=$TIME,mem=$MEM">>$SCRIPT
+if ! [[ -z $QUEUE ]]; then
+  echo "#PBS -q $QUEUE">>$SCRIPT
 fi
+echo "#PBS -e localhost:$ERRLOG">>$SCRIPT
+echo "#PBS -o localhost:$LOG">>$SCRIPT
+echo "#PBS -d $(pwd)">>$SCRIPT
+echo "#PBS -V"
+echo "export PBS_NCPU=$CPUS"
 if ! [[ -z "$CONDAENV" ]]; then
   echo "source $CONDA_PREFIX/etc/profile.d/conda.sh">>$SCRIPT
   echo "conda activate $CONDAENV">>$SCRIPT
@@ -208,4 +214,8 @@ if ! [[ -z "$CONDAENV" ]]; then
 fi
 
 #and submit
-sbatch $SCRIPT
+qsub $SCRIPT
+
+# $ submitjob.sh pwd
+# Slurm detected at: /usr/bin/sbatch
+# Submitted batch job 162814
