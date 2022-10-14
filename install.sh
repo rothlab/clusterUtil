@@ -4,6 +4,7 @@
 #Prefix can be defined by user argument. Defaults to ~/.local/bin
 PREFIX=${1:-${HOME}/.local/bin/}
 
+#Determine whether we're working with Slurm or PBS
 PBS_PATH=$(which qsub)
 SLURM_PATH=$(which sbatch)
 if [[ -n $SLURM_PATH ]]; then
