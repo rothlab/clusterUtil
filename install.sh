@@ -17,7 +17,7 @@ else
 fi
 
 #copy files to target directory
-cp -v ${BASEDIR}*.sh $(PREFIX)
+cp -v ${BASEDIR}*.sh ${PREFIX}
 
 #determine if bash dotfiles are writable
 if [[ -w ${HOME}/.bash_aliases ]]; then
