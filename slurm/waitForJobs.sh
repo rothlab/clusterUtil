@@ -8,7 +8,7 @@ waitForJobs.sh v0.0.1
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
-Waits for the specified set of slurm jobs to complete
+Waits for the specified set of PBS jobs to complete
 Usage: pacbioCCS.sh [-v|--verbose] [-i|--interval <SECONDS>]
     [-h|--help] [--] [<JOBS>]
 
@@ -25,10 +25,10 @@ EOF
  exit $1
 }
 
-#check if slurm is installed
-SLURM_PATH=$(which sbatch)
-if [ -x "$SLURM_PATH" ] ; then
-  echo "Slurm detected at: $SLURM_PATH"
+#check if PBS is installed
+PBS_PATH=$(which qstat)
+if [ -x "$PBS_PATH" ] ; then
+  echo "Slurm detected at: $PBS_PATH"
 else
   >&2 echo "#########################################"
   >&2 echo "ERROR: Slurm appears to not be installed!"
@@ -108,32 +108,34 @@ while (( $CURRJOBNUM > 0 )); do
   # query job information
   if [ -z "$JOBS" ]; then
     #output fields: jobid, jobname, status, reason
-    squeue -hu $USER -o "%i %30j %t %R">$TMPFILE
+    # squeue -hu $USER -o "%i %30j %t %R">$TMPFILE
+    qstat -u $USER|tail -n+3>$TMPFILE
   else
-    squeue -hu $USER -j${JOBS} -o "%i %30j %t %R">$TMPFILE
+    # squeue -hu $USER -j${JOBS} -o "%i %30j %t %R">$TMPFILE
+    qstat -u $USER ${JOBS/,/ }|tail -n+3>$TMPFILE
   fi
 
   #count number of jobs
-  CURRJOBNUM=$(cat $TMPFILE|wc -l)
+  CURRJOBNUM=$(cat $TMPFILE|awk '{if ($5!="C"){print $1}}'|wc -l)
 
-  #check if any are stuck ('held') and release if necessary
-  # STUCK=$(cat $TMPFILE|grep 'launch failed requeued held'|tr -s ' ' '\t'|cut -f 1|tr '\n' ',')
-  STUCK=$(grep 'launch failed requeued held' $TMPFILE|awk '{print $1}'|tr '\n' ',')
-  if ! [[ -z "$STUCK" ]]; then
-    if [[ $VERBOSE == 1 ]]; then
-      printf "\r$(date) WARNING: Failed/Held jobs detected! Attempting to release...\n"
-    fi
-    scontrol release "$STUCK"
-  fi
+  # #check if any are stuck ('held') and release if necessary
+  # # STUCK=$(cat $TMPFILE|grep 'launch failed requeued held'|tr -s ' ' '\t'|cut -f 1|tr '\n' ',')
+  # STUCK=$(grep 'launch failed requeued held' $TMPFILE|awk '{print $1}'|tr '\n' ',')
+  # if ! [[ -z "$STUCK" ]]; then
+  #   if [[ $VERBOSE == 1 ]]; then
+  #     printf "\r$(date) WARNING: Failed/Held jobs detected! Attempting to release...\n"
+  #   fi
+  #   scontrol release "$STUCK"
+  # fi
 
-  #check if any are suspended and requeue if necessary
-  SUSPENDED=$(awk '{if ($3 =="S"){print $1}}' $TMPFILE|tr '\n' ',')
-   if ! [[ -z "$SUSPENDED" ]]; then
-    if [[ $VERBOSE == 1 ]]; then
-      printf "\r$(date) WARNING: Suspended jobs detected! Requeuing...\n"
-    fi
-    scontrol requeue "$SUSPENDED"
-  fi
+  # #check if any are suspended and requeue if necessary
+  # SUSPENDED=$(awk '{if ($3 =="S"){print $1}}' $TMPFILE|tr '\n' ',')
+  #  if ! [[ -z "$SUSPENDED" ]]; then
+  #   if [[ $VERBOSE == 1 ]]; then
+  #     printf "\r$(date) WARNING: Suspended jobs detected! Requeuing...\n"
+  #   fi
+  #   scontrol requeue "$SUSPENDED"
+  # fi
 
   #Print status update (if verbose)
   if [[ $VERBOSE == 1 ]]; then
@@ -156,3 +158,14 @@ rm $TMPFILE
 if [[ $VERBOSE == 1 ]]; then
   printf "\r$(date) INFO: Done!              \n"
 fi
+
+# Job status codes:  
+# C -     Job is completed after having run/
+# E -  Job is exiting after having run.
+# H -  Job is held.
+# Q -  job is queued, eligible to run or routed.
+# R -  job is running.
+# T -  job is being moved to new location.
+# W -  job is waiting for its execution time
+#     (-a option) to be reached.
+# S -  (Unicos only) job is suspend.
