@@ -28,10 +28,10 @@ EOF
 #check if PBS is installed
 PBS_PATH=$(which qstat)
 if [ -x "$PBS_PATH" ] ; then
-  echo "Slurm detected at: $PBS_PATH"
+  echo "PBS detected at: $PBS_PATH"
 else
   >&2 echo "#########################################"
-  >&2 echo "ERROR: Slurm appears to not be installed!"
+  >&2 echo "ERROR: PBS appears to not be installed!"
   >&2 echo "#########################################"
   usage 1
 fi
