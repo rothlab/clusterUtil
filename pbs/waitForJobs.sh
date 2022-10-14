@@ -109,14 +109,14 @@ while (( $CURRJOBNUM > 0 )); do
   if [ -z "$JOBS" ]; then
     #output fields: jobid, jobname, status, reason
     # squeue -hu $USER -o "%i %30j %t %R">$TMPFILE
-    qstat -u $USER|tail -n+3>$TMPFILE
+    qstat -u $USER|tail -n+6>$TMPFILE
   else
     # squeue -hu $USER -j${JOBS} -o "%i %30j %t %R">$TMPFILE
-    qstat -u $USER ${JOBS/,/ }|tail -n+3>$TMPFILE
+    qstat -u $USER ${JOBS/,/ }|tail -n+6>$TMPFILE
   fi
 
   #count number of jobs
-  CURRJOBNUM=$(cat $TMPFILE|awk '{if ($5!="C"){print $1}}'|wc -l)
+  CURRJOBNUM=$(cat $TMPFILE|awk '{if ($10!="C"){print $1}}'|wc -l)
 
   # #check if any are stuck ('held') and release if necessary
   # # STUCK=$(cat $TMPFILE|grep 'launch failed requeued held'|tr -s ' ' '\t'|cut -f 1|tr '\n' ',')
