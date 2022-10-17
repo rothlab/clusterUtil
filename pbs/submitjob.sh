@@ -176,10 +176,14 @@ done
 
 #check if requested conda environment exists
 if ! [[ -z "$CONDAENV" ]]; then
+  # if [[ ! -x $CONDA_PREFIX/etc/profile.d/conda.sh ]]; then
+  #   echo "ERROR: Either Anaconda/Miniconda isn't installed or initialized or you're not in the conda base environment!">&2
+  #   exit 1
+  # fi
   if conda env list|grep "$CONDAENV"; then
     echo "Successfully identified environment '$CONDAENV'"
   else
-    echo "Environment '$CONDAENV' does not exist!">&2
+    echo "ERROR: Environment '$CONDAENV' does not exist!">&2
     exit 1
   fi
 fi
@@ -219,3 +223,6 @@ qsub $SCRIPT
 # $ submitjob.sh pwd
 # Slurm detected at: /usr/bin/sbatch
 # Submitted batch job 162814
+
+# /opt/anaconda3/etc/profile.d/conda.sh
+# /home/rothlab/jweile/miniconda3/etc/profile.d/conda.sh
