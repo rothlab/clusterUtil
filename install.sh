@@ -26,7 +26,7 @@ if [[ -w ${HOME}/.bash_aliases ]]; then
 elif [[ -w ${HOME}/.bashrc ]]; then
   BRC=${HOME}/.bashrc
 else
-  echo "ERROR: Cannot write to .bash_alias or .bashrc!"
+  echo "ERROR: Cannot write to .bash_alias or .bashrc!">&2
   exit 1
 fi
 
@@ -49,12 +49,18 @@ else
     TMPFILE=$(mktemp)
     head -n $((START-1)) "${BRC}.bak">$TMPFILE
     # echo "$CONTENT">>$TMPFILE
-    cat ${BASEDIR}aliases>>$BRC
+    cat ${BASEDIR}aliases>>$TMPFILE
     tail -n +$((END+1)) "${BRC}.bak">>$TMPFILE
-    cp $TMPFILE $BRC
-    rm $TMPFILE
+    #check for valid syntax before overwriting old bashrc
+    if bash -n $BRC ; then
+      cp $TMPFILE $BRC
+      rm $TMPFILE
+    else
+      echo "ERROR! Invalid syntax in $BRC ! Cancelling replacement!">&2
+      exit 1
+    fi
   else
-    echo "ERROR: Invalid clusterUtil section in $BRC !"
+    echo "ERROR: Invalid clusterUtil section in $BRC !">&2
     exit 1
   fi
 fi
