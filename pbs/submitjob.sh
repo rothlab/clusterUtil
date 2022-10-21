@@ -42,6 +42,8 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
             is provided, all nodes are allowed.
 -q|--queue : Which queue to use. Defaults to default queue
 --conda   : activate given conda environment for job
+--skipValidation : skip conda environment activation (faster submission 
+            but will lead to failed jobs if environment isn't valid)
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
 <CMD>     : The command to execute
@@ -156,6 +158,10 @@ while (( "$#" )); do
         usage 1
       fi
       ;;
+    --skipValidation)
+      SKIPVALIDATION=1
+      shift
+      ;;
     --) # end of options indicates that the main command follows
       shift
       CMD=$@
@@ -175,7 +181,7 @@ while (( "$#" )); do
 done
 
 #check if requested conda environment exists
-if ! [[ -z "$CONDAENV" ]]; then
+if [[ -n "$CONDAENV" && -z "$SKIPVALIDATION" ]]; then
   # if [[ ! -x $CONDA_PREFIX/etc/profile.d/conda.sh ]]; then
   #   echo "ERROR: Either Anaconda/Miniconda isn't installed or initialized or you're not in the conda base environment!">&2
   #   exit 1
@@ -209,7 +215,9 @@ echo "#PBS -d $(pwd)">>$SCRIPT
 echo "#PBS -V"
 echo "export PBS_NCPU=$CPUS"
 if ! [[ -z "$CONDAENV" ]]; then
-  echo "source $CONDA_PREFIX/etc/profile.d/conda.sh">>$SCRIPT
+  #using single quotes to ensure that the CONDA_PREFIX variable doesn't get evaluated until PBS script is executed
+  #this way we're not inserting the prefix of any currently active environment
+  echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
   echo "conda activate $CONDAENV">>$SCRIPT
 fi
 echo "$CMD">>$SCRIPT
