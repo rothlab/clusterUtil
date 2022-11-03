@@ -212,8 +212,8 @@ fi
 echo "#PBS -e localhost:$ERRLOG">>$SCRIPT
 echo "#PBS -o localhost:$LOG">>$SCRIPT
 echo "#PBS -d $(pwd)">>$SCRIPT
-echo "#PBS -V"
-echo "export PBS_NCPU=$CPUS"
+echo "#PBS -V">>$SCRIPT
+echo "export PBS_NCPU=$CPUS">>$SCRIPT
 if ! [[ -z "$CONDAENV" ]]; then
   #using single quotes to ensure that the CONDA_PREFIX variable doesn't get evaluated until PBS script is executed
   #this way we're not inserting the prefix of any currently active environment
