@@ -107,12 +107,16 @@ while (( $CURRJOBNUM > 0 )); do
 
   # query job information
   if [ -z "$JOBS" ]; then
-    #output fields: jobid, jobname, status, reason
-    # squeue -hu $USER -o "%i %30j %t %R">$TMPFILE
     qstat -u $USER|tail -n+6>$TMPFILE
   else
-    # squeue -hu $USER -j${JOBS} -o "%i %30j %t %R">$TMPFILE
-    qstat -u $USER ${JOBS/,/ }|tail -n+6>$TMPFILE
+    qstat ${JOBS//,/ }|tail -n+6>$TMPFILE
+    # #clear the tempfile since we have to iteratively append below
+    # rm "$TMPFILE"
+    # #qstat can't deal with too many job ids at once, so we need to break it into smaller requests
+    # JOBARRAY=(${JOBS//,/ })
+    # for (( i = 0; i < ${#JOBARRAY[@]}; i+=10 )); do
+    #   qstat "${JOBARRAY[@]:$i:10}"|tail -n+6>>$TMPFILE
+    # done
   fi
 
   #count number of jobs
