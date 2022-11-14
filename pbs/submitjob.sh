@@ -209,8 +209,13 @@ echo "#PBS -l nodes=1:ppn=$CPUS,walltime=$TIME,mem=$MEM">>$SCRIPT
 if ! [[ -z $QUEUE ]]; then
   echo "#PBS -q $QUEUE">>$SCRIPT
 fi
-echo "#PBS -e localhost:$ERRLOG">>$SCRIPT
-echo "#PBS -o localhost:$LOG">>$SCRIPT
+  echo "#PBS -o localhost:$LOG">>$SCRIPT
+#if log and errlog are supposed to be the same file, then we need to merge stderr into stdout
+if [[ "$LOG" == "$ERRLOG" ]]; then
+  echo "#PBS -j oe">>$SCRIPT
+else
+  echo "#PBS -e localhost:$ERRLOG">>$SCRIPT
+fi
 echo "#PBS -d $(pwd)">>$SCRIPT
 echo "#PBS -V">>$SCRIPT
 echo "export PBS_NCPU=$CPUS">>$SCRIPT
