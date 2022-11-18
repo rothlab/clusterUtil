@@ -97,6 +97,12 @@ echo ""
 
 #create temporary file for squeue output
 TMPFILE=$(mktemp)
+TMPERRFILE=$(mktemp)
+
+TMPACTIVE=$(mktemp)
+
+ACTIVEJOBS=${JOBS//,/ }
+echo "${ACTIVEJOBS// /$'\n'}">$TMPACTIVE
 
 #the number of currently active jobs (with 1 pseudo-job to begin with)
 CURRJOBNUM=1
@@ -109,7 +115,30 @@ while (( $CURRJOBNUM > 0 )); do
   if [ -z "$JOBS" ]; then
     qstat -u $USER|tail -n+6>$TMPFILE
   else
-    qstat ${JOBS//,/ }|tail -n+6>$TMPFILE
+    #redirect stdout and stderror into different pipes to record statuses and errors
+    { qstat -u $USER ${ACTIVEJOBS}|tail -n+6>"$TMPFILE" ; } 2>&1 | grep "Unknown Job Id">"$TMPERRFILE"
+    # Completed jobs disappear from the PBS database after a while and will cause errors if queried.
+    # So they need to be removed from the $ACTIVEJOBS list to prevent cascading errors.
+    #extract list of completed jobs from qstat output
+    COMPLETED=$(cat $TMPFILE|awk '{if ($10=="C"){print $1}}')
+    #check if any errors regarding unrecognized job IDs occurred
+    if (( $(cat $TMPERRFILE|wc -l) > 0 )); then
+      #if so, extract the missing job IDs and add them to the 'completed' list
+      MISSING=$(awk 'NF>1{print $NF}' "$TMPERRFILE"|sort|uniq)
+      COMPLETED=$(printf "$COMPLETED\n$MISSING"|sort|uniq)
+      printf "\nDropping missing jobs: ${MISSING//$'\n'/, }\n" >&2
+    fi
+    #if the completed list is not empty...
+    if (( $(echo "$COMPLETED"|wc -l) > 0 )); then
+      #remove them from the active jobs list
+      ACTIVEJOBS=$(grep -vP "${COMPLETED//$'\n'/|}" $TMPACTIVE)
+      #make sure to re-convert newlines into spaces on the active list
+      ACTIVEJOBS=${ACTIVEJOBS//$'\n'/ }
+      #and also update the temporary file
+      echo "${ACTIVEJOBS// /$'\n'}">$TMPACTIVE
+    fi
+    # ACTIVEJOBS=$(echo $ACTIVEJOBS|sed "s/${MISSING//$'\n'/[,]*\|}//g"|sed 's/^[,]*\|[,]*$//')
+
     # #clear the tempfile since we have to iteratively append below
     # rm "$TMPFILE"
     # #qstat can't deal with too many job ids at once, so we need to break it into smaller requests
@@ -157,7 +186,7 @@ while (( $CURRJOBNUM > 0 )); do
 done
 
 #clean up
-rm $TMPFILE
+rm $TMPFILE $TMPERRFILE $TMPACTIVE
 
 if [[ $VERBOSE == 1 ]]; then
   printf "\r$(date) INFO: Done!              \n"
