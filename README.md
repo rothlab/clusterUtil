@@ -9,7 +9,7 @@ git clone https://github.com/jweile/clusterUtil.git
 #change to repo folder
 cd clusterUtil
 #run installer
-make install
+./install.sh
 ```
 
 ## Commands included
