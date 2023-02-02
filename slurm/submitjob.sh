@@ -42,6 +42,8 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
             is provided, all nodes are allowed.
 -q|--queue : Which queue to use. Defaults to default queue
 --conda   : activate given conda environment for job
+--skipValidation : skip conda environment activation (faster submission 
+            but will lead to failed jobs if environment isn't valid)
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
 <CMD>     : The command to execute
@@ -155,6 +157,10 @@ while (( "$#" )); do
         usage 1
       fi
       ;;
+    --skipValidation)
+      SKIPVALIDATION=1
+      shift
+      ;;
     --) # end of options indicates that the main command follows
       shift
       CMD=$@
@@ -174,7 +180,7 @@ while (( "$#" )); do
 done
 
 #check if requested conda environment exists
-if ! [[ -z "$CONDAENV" ]]; then
+if ! [[ -z "$CONDAENV" && -z "$SKIPVALIDATION" ]]; then
   if conda env list|grep "$CONDAENV"; then
     echo "Successfully identified environment '$CONDAENV'"
   else
