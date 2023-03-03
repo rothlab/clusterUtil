@@ -207,7 +207,7 @@ if ! [[ -z $BLACKLIST ]]; then
   echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
 if ! [[ -z "$CONDAENV" ]]; then
-  echo "source $CONDA_PREFIX/etc/profile.d/conda.sh">>$SCRIPT
+  echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
   echo "conda activate $CONDAENV">>$SCRIPT
 fi
 echo "$CMD">>$SCRIPT
