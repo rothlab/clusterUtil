@@ -207,11 +207,20 @@ if ! [[ -z $BLACKLIST ]]; then
   echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
 if ! [[ -z "$CONDAENV" ]]; then
-  echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
-  echo "conda activate $CONDAENV">>$SCRIPT
+  #if we're in the base environment, activate the desired new environment
+  if [[ -z $CONDA_DEFAULT_ENV || $CONDA_DEFAULT_ENV == "base" ]]; then
+    echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
+    echo "conda activate $CONDAENV">>$SCRIPT
+    ACTIVATED=1
+  #if we're neither in base, nor in $CONDAENV, then we're screwed.
+  elif [[ "$CONDA_DEFAULT_ENV" != "$CONDAENV" ]]; then
+    echo "Current environment is neither base nor $CONDAENV. Unable to proceed">&2
+    exit 1
+  fi
 fi
 echo "$CMD">>$SCRIPT
-if ! [[ -z "$CONDAENV" ]]; then
+# if ! [[ -z "$CONDAENV" ]]; then
+if [[ -n $ACTIVATED ]]; then
   echo "conda deactivate">>$SCRIPT
 fi
 
