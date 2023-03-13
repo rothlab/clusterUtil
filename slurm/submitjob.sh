@@ -223,6 +223,8 @@ echo "$CMD">>$SCRIPT
 if [[ -n $ACTIVATED ]]; then
   echo "conda deactivate">>$SCRIPT
 fi
+#make script executable
+chmod u+x $SCRIPT
 
 #and submit
 sbatch $SCRIPT

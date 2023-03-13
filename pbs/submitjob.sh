@@ -225,10 +225,14 @@ if ! [[ -z "$CONDAENV" ]]; then
   echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
   echo "conda activate $CONDAENV">>$SCRIPT
 fi
+#some versions of PBS don't support the -d argument, so we're changing directories manually as well.
+echo "cd $(pwd)">>$SCRIPT
 echo "$CMD">>$SCRIPT
 if ! [[ -z "$CONDAENV" ]]; then
   echo "conda deactivate">>$SCRIPT
 fi
+#make script executable
+chmod u+x $SCRIPT
 
 #and submit
 qsub $SCRIPT
