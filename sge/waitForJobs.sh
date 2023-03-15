@@ -8,7 +8,7 @@ waitForJobs.sh v0.0.1
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
-Waits for the specified set of PBS jobs to complete
+Waits for the specified set of SGE jobs to complete
 Usage: pacbioCCS.sh [-v|--verbose] [-i|--interval <SECONDS>]
     [-h|--help] [--] [<JOBS>]
 
@@ -25,13 +25,13 @@ EOF
  exit $1
 }
 
-#check if PBS is installed
-PBS_PATH=$(which qstat)
-if [ -x "$PBS_PATH" ] ; then
-  echo "PBS detected at: $PBS_PATH"
+#check if SGE is installed
+SGE_PATH=$(which qstat)
+if [ -x "$SGE_PATH" ] ; then
+  echo "SGE detected at: $SGE_PATH"
 else
   >&2 echo "#########################################"
-  >&2 echo "ERROR: PBS appears to not be installed!"
+  >&2 echo "ERROR: SGE appears to not be installed!"
   >&2 echo "#########################################"
   usage 1
 fi
@@ -97,15 +97,9 @@ echo ""
 
 #create temporary file for squeue output
 TMPFILE=$(mktemp)
-#and a temp file for squeue error messages
-TMPERRFILE=$(mktemp)
-#and a temp file for the list of active jobs
-TMPACTIVE=$(mktemp)
 
-#$ACTIVEJOBS is a space-separated list of active job IDs
+#$ACTIVEJOBS is a comma-separated list of active job IDs
 ACTIVEJOBS=${JOBS//,/ }
-#a newline-separated version is also stored in the $TMPACTIVE file
-echo "${ACTIVEJOBS// /$'\n'}">$TMPACTIVE
 
 #the number of currently active jobs (with 1 pseudo-job to begin with)
 CURRJOBNUM=1
@@ -116,35 +110,18 @@ while (( $CURRJOBNUM > 0 )); do
 
   # query job information
   if [ -z "$JOBS" ]; then
-    qstat -u $USER|tail -n+6>$TMPFILE
+    qstat -u $USER|tail -n+3>$TMPFILE
   else
     #redirect stdout and stderror into different pipes to record statuses and errors
-    { qstat -u $USER ${ACTIVEJOBS}|tail -n+6>"$TMPFILE" ; } 2>&1 | grep "Unknown Job Id">"$TMPERRFILE"
-    # Completed jobs disappear from the PBS database after a while and will cause errors if queried.
-    # So they need to be removed from the $ACTIVEJOBS list to prevent cascading errors.
-    #extract list of completed jobs from qstat output
-    COMPLETED=$(cat $TMPFILE|awk '{if ($10=="C"){print $1}}')
-    #check if any errors regarding unrecognized job IDs occurred
-    if (( $(cat $TMPERRFILE|wc -l) > 0 )); then
-      #if so, extract the missing job IDs and add them to the 'completed' list
-      MISSING=$(awk 'NF>1{print $NF}' "$TMPERRFILE"|sort|uniq)
-      COMPLETED=$(printf "$COMPLETED\n$MISSING"|sort|uniq)
-      printf "\nDropping missing jobs: ${MISSING//$'\n'/, }\n" >&2
-    fi
-    #if the completed list is not empty...
-    if (( $(echo "$COMPLETED"|wc -l) > 0 )); then
-      #remove them from the active jobs list
-      ACTIVEJOBS=$(grep -vP "${COMPLETED//$'\n'/|}" $TMPACTIVE)
-      #make sure to re-convert newlines into spaces on the active list
-      ACTIVEJOBS=${ACTIVEJOBS//$'\n'/ }
-      #and also update the temporary file
-      echo "${ACTIVEJOBS// /$'\n'}">$TMPACTIVE
-    fi
+    qstat -u $USER -j ${ACTIVEJOBS}|tail -n+3>"$TMPFILE" 
   fi
 
+  #Update the list of active jobs
+  ACTIVEJOBS=$(awk '{print $1}' "$TMPFILE")
+  #make sure to convert newlines into commas on the active list
+  ACTIVEJOBS=${ACTIVEJOBS//$'\n'/,}
   #count number of jobs
-  # CURRJOBNUM=$(cat $TMPFILE|awk '{if ($10!="C"){print $1}}'|wc -l)
-  CURRJOBNUM=$(cat $TMPACTIVE|wc -l)
+  CURRJOBNUM=$(cat $TMPFILE|wc -l)
 
   #Print status update (if verbose)
   if [[ $VERBOSE == 1 ]]; then
@@ -162,7 +139,7 @@ while (( $CURRJOBNUM > 0 )); do
 done
 
 #clean up
-rm $TMPFILE $TMPERRFILE $TMPACTIVE
+rm $TMPFILE 
 
 if [[ $VERBOSE == 1 ]]; then
   printf "\r$(date) INFO: Done!              \n"

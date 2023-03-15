@@ -2,7 +2,7 @@
 
 #DEFAULT PARAMETERS
 #change as desired below
-LOGDIR=$HOME/pbslogs
+LOGDIR=$HOME/sgelogs
 TIME="01:00:00"
 DATETIME=$(date +%Y%m%d%H%M%S)
 ALPHATAG=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 8)
@@ -24,7 +24,7 @@ submitjob.sh v0.0.1
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
-Submits a new PBS job
+Submits a new SGE job
 Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>] 
     [-c|cpus <NUMCPUS>] [-m|--mem <MEMORY>] [-l|--log <LOGFILE>] 
     [-e|--err <ERROR_LOGFILE>] [--conda <ENV>] [--] <CMD>
@@ -57,13 +57,13 @@ EOF
  exit $1
 }
 
-#check if PBS is installed
-PBS_PATH=$(which qsub)
-if [ -x "$PBS_PATH" ] ; then
-  echo "PBS detected at: $PBS_PATH"
+#check if SGE is installed
+SGE_PATH=$(which qsub)
+if [ -x "$SGE_PATH" ] ; then
+  echo "SGE detected at: $SGE_PATH"
 else
   >&2 echo "##########################################"
-  >&2 echo "ERROR: PBS doesn't appear to be installed!"
+  >&2 echo "ERROR: SGE doesn't appear to be installed!"
   >&2 echo "##########################################"
   usage 1
 fi
@@ -195,7 +195,7 @@ if [[ -n "$CONDAENV" && -z "$SKIPVALIDATION" ]]; then
 fi
 
 if ! [[ -z $BLACKLIST ]]; then
-  echo "WARNING: Blacklisting is not currently supported for PBS"
+  echo "WARNING: Blacklisting is not currently supported for SGE"
 fi
 
 #create logdir if it doesn't exist
@@ -204,32 +204,31 @@ mkdir -p $LOGDIR
 LOG=$(readlink -f $LOG)
 ERRLOG=$(readlink -f $ERRLOG)
 
-#write the PBS submission script
+#write the SGE submission script
 echo "#!/bin/bash">$SCRIPT
-echo "#PBS -S /bin/bash">>$SCRIPT
-echo "#PBS -N $JOBNAME">>$SCRIPT
-echo "#PBS -l nodes=1:ppn=$CPUS,walltime=$TIME,mem=$MEM">>$SCRIPT
+echo "#$ -S /bin/bash">>$SCRIPT
+echo "#$ -N $JOBNAME">>$SCRIPT
+echo "#$ -l num_cpus>$CPUS">>$SCRIPT
+echo "#$ -l h_rt=$TIME ">>$SCRIPT
+echo "#$ -l h_vmem>$MEM">>$SCRIPT
 if ! [[ -z $QUEUE ]]; then
-  echo "#PBS -q $QUEUE">>$SCRIPT
+  echo "#$ -q $QUEUE">>$SCRIPT
 fi
-  echo "#PBS -o localhost:$LOG">>$SCRIPT
+echo "#$ -o localhost:$LOG">>$SCRIPT
 #if log and errlog are supposed to be the same file, then we need to merge stderr into stdout
 if [[ "$LOG" == "$ERRLOG" ]]; then
-  echo "#PBS -j oe">>$SCRIPT
+  echo "#$ -j y">>$SCRIPT
 else
-  echo "#PBS -e localhost:$ERRLOG">>$SCRIPT
+  echo "#$ -e localhost:$ERRLOG">>$SCRIPT
 fi
-echo "#PBS -d $(pwd)">>$SCRIPT
-echo "#PBS -V">>$SCRIPT
-echo "export PBS_NCPU=$CPUS">>$SCRIPT
+echo "#$ -cwd">>$SCRIPT
+echo "#$ -V">>$SCRIPT
 if ! [[ -z "$CONDAENV" ]]; then
-  #using single quotes to ensure that the CONDA_PREFIX variable doesn't get evaluated until PBS script is executed
+  #using single quotes to ensure that the CONDA_PREFIX variable doesn't get evaluated until SGE script is executed
   #this way we're not inserting the prefix of any currently active environment
   echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
   echo "conda activate $CONDAENV">>$SCRIPT
 fi
-#some versions of PBS don't support the -d argument, so we're changing directories manually as well.
-echo "cd $(pwd)">>$SCRIPT
 echo "$CMD">>$SCRIPT
 if ! [[ -z "$CONDAENV" ]]; then
   echo "conda deactivate">>$SCRIPT
@@ -237,12 +236,12 @@ fi
 #make script executable
 chmod u+x $SCRIPT
 
-#and submit
-qsub $SCRIPT
-
-# $ submitjob.sh pwd
-# Slurm detected at: /usr/bin/sbatch
-# Submitted batch job 162814
-
-# /opt/anaconda3/etc/profile.d/conda.sh
-# /home/rothlab/jweile/miniconda3/etc/profile.d/conda.sh
+#submit, and record the job id
+RETVAL=$(qsub $SCRIPT 2>&1)
+RX="Your job ([0-9]+) .+ has been submitted"
+if [[ "$RETVAL" =~ $RX ]]; then
+  echo ${BASH_REMATCH[1]}
+else
+  echo "Submission failed!">&2
+  echo $RETVAL>&2
+fi
