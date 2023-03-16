@@ -1,6 +1,6 @@
 # >>> clusterUtil >>>
-cleanPBSLogs() {
-  LOGDIR=$HOME/pbslogs
+cleanSGELogs() {
+  LOGDIR=$HOME/sgelogs
   DAYS=${1:-13}
   find $LOGDIR -type f -mtime +$DAYS -delete
 }

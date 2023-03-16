@@ -1,18 +1,31 @@
 #!/bin/bash
 #Installer script
-
+set +H
 #Prefix can be defined by user argument. Defaults to ~/.local/bin
 PREFIX=${1:-${HOME}/.local/bin/}
 
 #Determine whether we're working with Slurm or PBS
-PBS_PATH=$(which qsub)
+QSUB_PATH=$(which qsub)
 SLURM_PATH=$(which sbatch)
 if [[ -n $SLURM_PATH ]]; then
+  echo "Detected Slurm installation."
   BASEDIR="slurm/"
-elif [[ -n $PBS_PATH ]]; then
-  BASEDIR="pbs/"
+elif [[ -n $QSUB_PATH ]]; then
+  echo "Detected qsub executable."
+  while [[ -z $BASEDIR ]]; do
+    echo "Please type 'PBS' if this a PBS (Torque/OpenPBS/PBS Pro) system or type 'SGE' if this GridEngine (SGE/Univa/Altair) system."
+    read -r HPCTYPE
+    if [[ $HPCTYPE == "PBS" ]]; then
+      BASEDIR="pbs/"
+    elif [[ $HPCTYPE == "SGE" ]]; then
+      BASEDIR="sge/"
+    else
+      echo "\nInvalid answer!"
+    fi
+  done
 else
-  echo "ERROR: Neither SLURM nor PBS were found!">&2
+  echo "ERROR: Unable to determine HPC system!">&2
+  echo "No Slurm / PBS / SGE executable found.">&2
   exit 1
 fi
 
