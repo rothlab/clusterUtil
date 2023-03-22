@@ -98,9 +98,6 @@ echo ""
 #create temporary file for squeue output
 TMPFILE=$(mktemp)
 
-#$ACTIVEJOBS is a comma-separated list of active job IDs
-ACTIVEJOBS=${JOBS//,/ }
-
 #the number of currently active jobs (with 1 pseudo-job to begin with)
 CURRJOBNUM=1
 CYCLE=0
@@ -108,20 +105,24 @@ while (( $CURRJOBNUM > 0 )); do
   #wait for time interval
   sleep $INTERVAL
 
-  # query job information
-  if [ -z "$JOBS" ]; then
-    qstat -u $USER|tail -n+3>$TMPFILE
-  else
-    #redirect stdout and stderror into different pipes to record statuses and errors
-    qstat -u $USER -j ${ACTIVEJOBS}|tail -n+3>"$TMPFILE" 
-  fi
+  # query job information and store in temp file (in case we want more info later)
+  qstat -u $USER|tail -n+3>$TMPFILE
 
   #Update the list of active jobs
-  ACTIVEJOBS=$(awk '{print $1}' "$TMPFILE")
-  #make sure to convert newlines into commas on the active list
-  ACTIVEJOBS=${ACTIVEJOBS//$'\n'/,}
+  if [[ -n "$JOBS" ]]; then
+    #ACTIVEJOBS is a newline-separated list of active job ids
+    #if JOBS input list was specified, we use it to filter the output
+    ACTIVEJOBS=$(awk '{print $1}' "$TMPFILE"|grep -P "${JOBS//,/|}")
+  else 
+    ACTIVEJOBS=$(awk '{print $1}' "$TMPFILE")
+  fi
   #count number of jobs
-  CURRJOBNUM=$(cat $TMPFILE|wc -l)
+  if [[ -z "$ACTIVEJOBS" ]]; then
+    #when the list is empty, echo still returns a newline character which wc would count as 1 line
+    CURRJOBNUM=0
+  else
+    CURRJOBNUM=$(echo $ACTIVEJOBS|wc -l)
+  fi
 
   #Print status update (if verbose)
   if [[ $VERBOSE == 1 ]]; then
@@ -144,14 +145,3 @@ rm $TMPFILE
 if [[ $VERBOSE == 1 ]]; then
   printf "\r$(date) INFO: Done!              \n"
 fi
-
-# Job status codes:  
-# C -     Job is completed after having run/
-# E -  Job is exiting after having run.
-# H -  Job is held.
-# Q -  job is queued, eligible to run or routed.
-# R -  job is running.
-# T -  job is being moved to new location.
-# W -  job is waiting for its execution time
-#     (-a option) to be reached.
-# S -  (Unicos only) job is suspend.
