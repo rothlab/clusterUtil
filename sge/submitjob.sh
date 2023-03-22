@@ -208,18 +208,19 @@ ERRLOG=$(readlink -f $ERRLOG)
 echo "#!/bin/bash">$SCRIPT
 echo "#$ -S /bin/bash">>$SCRIPT
 echo "#$ -N $JOBNAME">>$SCRIPT
-echo "#$ -l num_cpus>$CPUS">>$SCRIPT
+echo "#$ -binding linear:$CPUS">>$SCRIPT
+echo "#$ -l m_thread=$CPUS">>$SCRIPT
 echo "#$ -l h_rt=$TIME ">>$SCRIPT
-echo "#$ -l h_vmem>$MEM">>$SCRIPT
+echo "#$ -l h_vmem=$MEM">>$SCRIPT
 if ! [[ -z $QUEUE ]]; then
   echo "#$ -q $QUEUE">>$SCRIPT
 fi
-echo "#$ -o localhost:$LOG">>$SCRIPT
+echo "#$ -o $LOG">>$SCRIPT
 #if log and errlog are supposed to be the same file, then we need to merge stderr into stdout
 if [[ "$LOG" == "$ERRLOG" ]]; then
   echo "#$ -j y">>$SCRIPT
 else
-  echo "#$ -e localhost:$ERRLOG">>$SCRIPT
+  echo "#$ -e $ERRLOG">>$SCRIPT
 fi
 echo "#$ -cwd">>$SCRIPT
 echo "#$ -V">>$SCRIPT
