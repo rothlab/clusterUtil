@@ -121,7 +121,7 @@ while (( $CURRJOBNUM > 0 )); do
     #when the list is empty, echo still returns a newline character which wc would count as 1 line
     CURRJOBNUM=0
   else
-    CURRJOBNUM=$(echo $ACTIVEJOBS|wc -l)
+    CURRJOBNUM=$(echo "$ACTIVEJOBS"|wc -l)
   fi
 
   #Print status update (if verbose)
