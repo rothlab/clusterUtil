@@ -180,6 +180,14 @@ while (( "$#" )); do
   esac
 done
 
+#SGE job names are not allowed to start with digits, so we check if that's the case
+#and prepend an "X"-character if so.
+RX="^[0-9]+"
+if [[ "$JOBNAME" =~ $RX ]]; then
+  JOBNAME=X"$JOBNAME"
+  echo "WARNING: Adjusted non-compliant job name to: $JOBNAME"
+fi
+
 #check if requested conda environment exists
 if [[ -n "$CONDAENV" && -z "$SKIPVALIDATION" ]]; then
   # if [[ ! -x $CONDA_PREFIX/etc/profile.d/conda.sh ]]; then
@@ -245,4 +253,5 @@ if [[ "$RETVAL" =~ $RX ]]; then
 else
   echo "Submission failed!">&2
   echo $RETVAL>&2
+  exit 1
 fi
