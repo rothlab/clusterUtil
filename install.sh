@@ -11,18 +11,28 @@ if [[ -n $SLURM_PATH ]]; then
   echo "Detected Slurm installation."
   BASEDIR="slurm/"
 elif [[ -n $QSUB_PATH ]]; then
-  echo "Detected qsub executable."
-  while [[ -z $BASEDIR ]]; do
-    echo "Please type 'PBS' if this a PBS (Torque/OpenPBS/PBS Pro) system or type 'SGE' if this GridEngine (SGE/Univa/Altair) system."
-    read -r HPCTYPE
-    if [[ $HPCTYPE == "PBS" ]]; then
-      BASEDIR="pbs/"
-    elif [[ $HPCTYPE == "SGE" ]]; then
-      BASEDIR="sge/"
-    else
-      echo "\nInvalid answer!"
-    fi
-  done
+  #this could either be PBS or SGE, look for programs that are exclusive to either
+  QRUN_PATH=$(which qrun)
+  QCONF_PATH=$(which qconf)
+  if [[ -n $QRUN_PATH ]]; then
+    echo "Detected PBS installation."
+    BASEDIR="pbs/"
+  elif [[ -n $QCONF_PATH ]]; then
+    echo "Detected SGE installation."
+    BASEDIR="sge/"
+  fi
+  # echo "Detected qsub executable."
+  # while [[ -z $BASEDIR ]]; do
+  #   echo "Please type 'PBS' if this a PBS (Torque/OpenPBS/PBS Pro) system or type 'SGE' if this GridEngine (SGE/Univa/Altair) system."
+  #   read -r HPCTYPE
+  #   if [[ $HPCTYPE == "PBS" ]]; then
+  #     BASEDIR="pbs/"
+  #   elif [[ $HPCTYPE == "SGE" ]]; then
+  #     BASEDIR="sge/"
+  #   else
+  #     echo "\nInvalid answer!"
+  #   fi
+  # done
 else
   echo "ERROR: Unable to determine HPC system!">&2
   echo "No Slurm / PBS / SGE executable found.">&2
