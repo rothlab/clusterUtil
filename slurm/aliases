@@ -19,4 +19,9 @@ alias listnodes="sinfo -Nl"
 
 alias showjob="scontrol show job"
 
+function qstat() {
+  echo "You probably meant squeue 😅 ..."
+  squeue $@
+}
+
 # <<< clusterUtil <<<

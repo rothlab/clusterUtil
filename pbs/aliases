@@ -15,7 +15,7 @@ cleanPBSLogs() {
 
 # alias deleteallmyjobs="scancel -u $USER"
 
-# alias listnodes="sinfo -Nl"
+alias listnodes="pbsnodes"
 
 alias showjob="qstat -f"
 
