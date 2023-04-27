@@ -9,7 +9,7 @@ waitForJobs.sh v0.0.1
 by Jochen Weile <jochenweile@gmail.com> 2021
 
 Waits for the specified set of slurm jobs to complete
-Usage: pacbioCCS.sh [-v|--verbose] [-i|--interval <SECONDS>]
+Usage: waitForJobs.sh [-v|--verbose] [-i|--interval <SECONDS>]
     [-h|--help] [--] [<JOBS>]
 
 -v|--verbose  : Print number of remaining jobs every interval.
