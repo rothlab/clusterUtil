@@ -5,7 +5,8 @@ library(argparser)
 
 p <- arg_parser(
   "visualize profiler data",
-  name="profiler_vis.R"
+  name="profiler_vis.R",
+  hide.opts=TRUE
 )
 p <- add_argument(p, "input", help="input profiler log file")
 p <- add_argument(p, "--output", help="output file. Defaults to same name as input but with .pdf extension")
