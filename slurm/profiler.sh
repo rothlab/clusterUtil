@@ -4,7 +4,7 @@ LOGDIR=$HOME/slurmlogs
 DATETIME=$(date +%Y%m%d%H%M%S)
 ALPHATAG=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 8)
 JOBNAME="${USER}_${DATETIME}_$ALPHATAG"
-LOG=${LOGDIR}/profile_${JOBNAME}.tsv
+LOGFILE=${LOGDIR}/profile_${JOBNAME}.tsv
 INTERVAL=5
 
 #helper function to print usage information
@@ -20,7 +20,7 @@ Usage: profiler.sh [-l|--log <LOGFILE>] [--] <CMD>
 
 -l|--log      : Output file, to which profiler data will be written. Defaults to 
               profile_<USER>_<TIME>_<RANDOMID>.tsv in log directory ${LOGDIR} ,
-              e.g. ${LOG}
+              e.g. ${LOGFILE}
 -i|--interval : Scanning interval in seconds (Default: $INTERVAL)
 --            : Indicates end of options, indicating that all following 
               arguments are part of the job command
@@ -115,8 +115,14 @@ while grep -q $MAINPID $TMP; do
   mapfile -t PIDS < <(awk '{print $1}' $TMP)
   mapfile -t PPIDS < <(awk '{print $2}' $TMP)
 
+  #get get the information for main PID
+  LNUM=$(echo "${PIDS[@]}"|tr ' ' '\n'|grep -n "$MAINPID"|cut -d: -f1)
+  IDX=$((LNUM-1))
+  MAINLINE="${PSLINES[IDX]}"
   #filter down to subprocesses of main PID
   getChildren "$MAINPID">"$TMP"
+  #also add the main process itself to the output
+  echo "$MAINLINE">>"$TMP"
   #calculate CPU and MEMORY totals
   TOTALCPU=$(awk '{print $3}' $TMP|paste -sd+|bc)
   TOTALMEM=$(awk '{print $4}' $TMP|paste -sd+|bc)
