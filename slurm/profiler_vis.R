@@ -43,8 +43,8 @@ axis(2)
 grid()
 par(mar=c(5,4,0,1))
 with(data,plot(
-  Time,Memory.KB./(2^20),
-  type="l",ylab="Memory(GB)",col="gold",
+  Time,ResidentMemory.KB./(2^20),
+  type="l",ylab="Resident Memory(GB)",col="gold",
   frame.plot=FALSE
 ))
 grid()

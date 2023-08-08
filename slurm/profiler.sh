@@ -92,20 +92,24 @@ TMP=$(mktemp)
 #relies on arrays defined outside of the function: PSLINES, PIDS and PPIDS
 getChildren() {
   PID=$1
-  #get indices of matching PPIDS
+  #get line numbers of matching PPIDS
   LNUMS=$(echo "${PPIDS[@]}"|tr ' ' '\n'|grep -n "$PID"|cut -d: -f1)
+  #iterate over those line numbers
   for LNUM in $LNUMS; do
+    #array index is 0-based
     IDX=$((LNUM-1))
+    #print matching line
     echo "${PSLINES[IDX]}"
+    #recursion into next level
     CPID="${PIDS[$IDX]}"
     getChildren "$CPID"
   done
 }
 
-printf "Time\tCPU(%%)\tMemory(KB)\tThreads\n">$LOGFILE
+printf "Time\tCPU(%%)\tResidentMemory(KB)\tVirtualMemory(KB)\tThreads\n">$LOGFILE
 
 #get all process information and store in temporary file
-ps -u "$USER" -o pid,ppid,pcpu,vsize,thcount>"$TMP"
+ps -u "$USER" -o pid,ppid,pcpu,rss,vsize,thcount>"$TMP"
 
 #loop until main process is no longer listed
 while grep -q $MAINPID $TMP; do
@@ -125,14 +129,15 @@ while grep -q $MAINPID $TMP; do
   echo "$MAINLINE">>"$TMP"
   #calculate CPU and MEMORY totals
   TOTALCPU=$(awk '{print $3}' $TMP|paste -sd+|bc)
-  TOTALMEM=$(awk '{print $4}' $TMP|paste -sd+|bc)
-  TOTALTHREADS=$(awk '{print $5}' $TMP|paste -sd+|bc)
+  TOTALRSS=$(awk '{print $4}' $TMP|paste -sd+|bc)
+  TOTALVMEM=$(awk '{print $5}' $TMP|paste -sd+|bc)
+  TOTALTHREADS=$(awk '{print $6}' $TMP|paste -sd+|bc)
 
-  printf "$(date '+%Y/%m/%d-%T')\t${TOTALCPU}\t${TOTALMEM}\t${TOTALTHREADS}\n">>$LOGFILE
+  printf "$(date '+%Y/%m/%d-%T')\t${TOTALCPU}\t${TOTALRSS}\t${TOTALVMEM}\t${TOTALTHREADS}\n">>$LOGFILE
 
   #wait and refresh process information 
   sleep $INTERVAL
-  ps -u "$USER" -o pid,ppid,pcpu,vsize,thcount>"$TMP"
+  ps -u "$USER" -o pid,ppid,pcpu,rss,vsize,thcount>"$TMP"
 done
 
 rm "$TMP"
