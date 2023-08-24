@@ -179,9 +179,21 @@ while (( "$#" )); do
   esac
 done
 
+#check if conda or mamba is installed
+if [[ -n $(command -v conda) ]]; then
+  CONDAMGR=conda
+elif [[ -n $(command -v mamba) ]]; then
+  CONDAMGR=mamba
+elif [[ -n $(command -v micromamba) ]]; then
+  CONDAMGR=micromamba
+elif [[ -n "$CONDAENV" ]]; then
+  echo "No conda installation was found!">&2
+  exit 1
+fi
+
 #check if requested conda environment exists
 if ! [[ -z "$CONDAENV" && -z "$SKIPVALIDATION" ]]; then
-  if conda env list|grep "$CONDAENV"; then
+  if ${CONDAMGR} env list|grep "$CONDAENV"; then
     echo "Successfully identified environment '$CONDAENV'"
   else
     echo "Environment '$CONDAENV' does not exist!">&2
@@ -209,8 +221,8 @@ fi
 if ! [[ -z "$CONDAENV" ]]; then
   #if we're in the base environment, activate the desired new environment
   if [[ -z $CONDA_DEFAULT_ENV || $CONDA_DEFAULT_ENV == "base" ]]; then
-    echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
-    echo "conda activate $CONDAENV">>$SCRIPT
+    echo 'source ${CONDA_PREFIX}'"/etc/profile.d/${CONDAMGR}.sh">>$SCRIPT
+    echo "${CONDAMGR} activate $CONDAENV">>$SCRIPT
     ACTIVATED=1
   #if we're neither in base, nor in $CONDAENV, then we're screwed.
   elif [[ "$CONDA_DEFAULT_ENV" != "$CONDAENV" ]]; then
@@ -221,7 +233,7 @@ fi
 echo "$CMD">>$SCRIPT
 # if ! [[ -z "$CONDAENV" ]]; then
 if [[ -n $ACTIVATED ]]; then
-  echo "conda deactivate">>$SCRIPT
+  echo "${CONDAMGR} deactivate">>$SCRIPT
 fi
 #make script executable
 chmod u+x $SCRIPT
