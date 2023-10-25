@@ -16,12 +16,13 @@ profiler.sh v0.0.1
 by Jochen Weile <jochenweile@gmail.com> 2021
 
 Generates a CPU and memory profile of a process subtree.
-Usage: profiler.sh [-l|--log <LOGFILE>] [--] <CMD>
+Usage: profiler.sh [-l|--log <LOGFILE>] [-i|--interval <INT>] [--conda <ENV>] [--] <CMD>
 
 -l|--log      : Output file, to which profiler data will be written. Defaults to 
               profile_<USER>_<TIME>_<RANDOMID>.tsv in log directory ${LOGDIR} ,
               e.g. ${LOGFILE}
 -i|--interval : Scanning interval in seconds (Default: $INTERVAL)
+-c|--conda    : Conda environment to activate for the profiled job.
 --            : Indicates end of options, indicating that all following 
               arguments are part of the job command
 <CMD>         : The command to execute
@@ -61,6 +62,15 @@ while (( "$#" )); do
         usage 1
       fi
       ;;
+    -c|--conda)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        CONDAENV=$2
+        shift 2
+      else
+        echo "ERROR: Argument for $1 is missing" >&2
+        usage 1
+      fi
+      ;;
     --) # end of options indicates that the main command follows
       shift
       CMD=$@
@@ -80,6 +90,32 @@ while (( "$#" )); do
 done
 
 mkdir -p ${LOGDIR}
+
+
+#check if conda or mamba is installed
+if [[ -n $(command -v conda) ]]; then
+  CONDAMGR=conda
+elif [[ -n $(command -v mamba) ]]; then
+  CONDAMGR=mamba
+elif [[ -n $(command -v micromamba) ]]; then
+  CONDAMGR=micromamba
+elif [[ -n "$CONDAENV" ]]; then
+  echo "No conda installation was found!">&2
+  exit 1
+fi
+
+#check if requested conda environment exists and activate
+if [[ -n "$CONDAENV" ]]; then
+  if ${CONDAMGR} env list|grep "$CONDAENV"; then
+    echo "Successfully identified environment '$CONDAENV'"
+    echo 'source ${CONDA_PREFIX}'"/etc/profile.d/${CONDAMGR}.sh">>$SCRIPT
+    echo "${CONDAMGR} activate $CONDAENV">>$SCRIPT
+  else
+    echo "Environment '$CONDAENV' does not exist!">&2
+    exit 1
+  fi
+fi
+
 #run the process
 eval $CMD &
 #record its process ID
