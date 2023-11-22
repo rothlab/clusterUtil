@@ -11,6 +11,7 @@ CPUS="1"
 MEM="1G"
 BLACKLIST=""
 QUEUE=""
+DOREPORT=0
 
 LOG=${LOGDIR}/${JOBNAME}.out
 ERRLOG=${LOGDIR}/${JOBNAME}.err
@@ -27,7 +28,8 @@ by Jochen Weile <jochenweile@gmail.com> 2021
 Submits a new slurm job
 Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>] 
     [-c|cpus <NUMCPUS>] [-m|--mem <MEMORY>] [-l|--log <LOGFILE>] 
-    [-e|--err <ERROR_LOGFILE>] [--conda <ENV>] [--] <CMD>
+    [-e|--err <ERROR_LOGFILE>] [--conda <ENV>] [--blacklist <LIST>]
+    [--skipValidation] [--report] [--] <CMD>
 
 -n|--name : Job name. Defaults to ${USER}_<TIMESTAMP>_<RANDOMSTRING>
 -t|--time : Maximum (wall-)runtime for this job in format HH:MM:SS.
@@ -44,6 +46,7 @@ Usage: submitjob.sh [-n|--name <JOBNAME>] [-t|--time <WALLTIME>]
 --conda   : activate given conda environment for job
 --skipValidation : skip conda environment activation (faster submission 
             but will lead to failed jobs if environment isn't valid)
+--report  : Report success or failure of job at the end of the log file
 --        : Indicates end of options, indicating that all following 
             arguments are part of the job command
 <CMD>     : The command to execute
@@ -161,6 +164,10 @@ while (( "$#" )); do
       SKIPVALIDATION=1
       shift
       ;;
+    --report)
+      DOREPORT=1
+      shift
+      ;;
     --) # end of options indicates that the main command follows
       shift
       CMD=$@
@@ -231,10 +238,16 @@ if ! [[ -z "$CONDAENV" ]]; then
   fi
 fi
 echo "$CMD">>$SCRIPT
+echo 'EXITCODE=$?'>>$SCRIPT
 # if ! [[ -z "$CONDAENV" ]]; then
 if [[ -n $ACTIVATED ]]; then
   echo "${CONDAMGR} deactivate">>$SCRIPT
 fi
+if [[ "$DOREPORT" == 1 ]]; then
+  echo 'if [[ "$EXITCODE" == 0 ]]; then echo "Job completed successfully."; else echo "Job failed with exit code $EXITCODE"; fi'>>$SCRIPT
+fi
+#propagate exit code to wrapper script
+echo 'exit $EXITCODE'>>$SCRIPT
 #make script executable
 chmod u+x $SCRIPT
 
