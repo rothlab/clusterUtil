@@ -21,7 +21,7 @@ SCRIPT=${LOGDIR}/${JOBNAME}.sh
 usage () {
   cat << EOF
 
-submitjob.sh v0.0.1 
+submitjob.sh v0.1.0
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
