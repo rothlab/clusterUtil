@@ -1,4 +1,5 @@
 #!/bin/bash 
+VERSION="1.0.0"
 
 #DEFAULT PARAMETERS
 #change as desired below
@@ -21,7 +22,7 @@ SCRIPT=${LOGDIR}/${JOBNAME}.sh
 usage () {
   cat << EOF
 
-submitjob.sh v0.0.1 
+submitjob.sh v${VERSION}
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
@@ -71,7 +72,6 @@ else
   usage 1
 fi
 
-
 #Parse Arguments
 PARAMS=""
 while (( "$#" )); do
@@ -79,6 +79,10 @@ while (( "$#" )); do
     -h|--help)
       usage 0
       shift
+      ;;
+    --version)
+      echo "submitjob.sh :: clusterutil v${VERSION}"
+      exit 0
       ;;
     -t|--time)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
@@ -187,13 +191,21 @@ while (( "$#" )); do
   esac
 done
 
+#check if conda or mamba is installed
+if [[ -n $(command -v conda) ]]; then
+  CONDAMGR=conda
+elif [[ -n $(command -v mamba) ]]; then
+  CONDAMGR=mamba
+elif [[ -n $(command -v micromamba) ]]; then
+  CONDAMGR=micromamba
+elif [[ -n "$CONDAENV" ]]; then
+  echo "No conda installation was found!">&2
+  exit 1
+fi
+
 #check if requested conda environment exists
 if [[ -n "$CONDAENV" && -z "$SKIPVALIDATION" ]]; then
-  # if [[ ! -x $CONDA_PREFIX/etc/profile.d/conda.sh ]]; then
-  #   echo "ERROR: Either Anaconda/Miniconda isn't installed or initialized or you're not in the conda base environment!">&2
-  #   exit 1
-  # fi
-  if conda env list|grep "$CONDAENV"; then
+  if ${CONDAMGR} env list|grep "$CONDAENV"; then
     echo "Successfully identified environment '$CONDAENV'"
   else
     echo "ERROR: Environment '$CONDAENV' does not exist!">&2
@@ -230,17 +242,27 @@ echo "#PBS -d $(pwd)">>$SCRIPT
 echo "#PBS -V">>$SCRIPT
 echo "export PBS_NCPU=$CPUS">>$SCRIPT
 if ! [[ -z "$CONDAENV" ]]; then
+  #if we're in the base environment, activate the desired new environment
+  if [[ -z $CONDA_DEFAULT_ENV || $CONDA_DEFAULT_ENV == "base" ]]; then
+    echo 'source ${CONDA_PREFIX}'"/etc/profile.d/${CONDAMGR}.sh">>$SCRIPT
+    echo "${CONDAMGR} activate $CONDAENV">>$SCRIPT
+    ACTIVATED=1
+  #if we're neither in base, nor in $CONDAENV, then we're screwed.
+  elif [[ "$CONDA_DEFAULT_ENV" != "$CONDAENV" ]]; then
+    echo "Current environment is neither base nor $CONDAENV. Unable to proceed">&2
+    exit 1
+  fi
   #using single quotes to ensure that the CONDA_PREFIX variable doesn't get evaluated until PBS script is executed
   #this way we're not inserting the prefix of any currently active environment
-  echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
-  echo "conda activate $CONDAENV">>$SCRIPT
+  # echo 'source ${CONDA_PREFIX}/etc/profile.d/conda.sh'>>$SCRIPT
+  # echo "conda activate $CONDAENV">>$SCRIPT
 fi
 #some versions of PBS don't support the -d argument, so we're changing directories manually as well.
 echo "cd $(pwd)">>$SCRIPT
 echo "$CMD">>$SCRIPT
 echo 'EXITCODE=$?'>>$SCRIPT
-if ! [[ -z "$CONDAENV" ]]; then
-  echo "conda deactivate">>$SCRIPT
+if [[ -n $ACTIVATED ]]; then
+  echo "${CONDAMGR} deactivate">>$SCRIPT
 fi
 if [[ "$DOREPORT" == 1 ]]; then
   echo 'if [[ "$EXITCODE" == 0 ]]; then echo "Job completed successfully."; else echo "Job failed with exit code $EXITCODE"; fi'>>$SCRIPT
@@ -252,10 +274,3 @@ chmod u+x $SCRIPT
 
 #and submit
 qsub $SCRIPT
-
-# $ submitjob.sh pwd
-# Slurm detected at: /usr/bin/sbatch
-# Submitted batch job 162814
-
-# /opt/anaconda3/etc/profile.d/conda.sh
-# /home/rothlab/jweile/miniconda3/etc/profile.d/conda.sh

@@ -1,10 +1,11 @@
 #!/bin/bash
+VERSION="1.0.0"
 
 #helper function to print usage information
 usage () {
-  cat << "EOF"
+  cat << EOF
 
-waitForJobs.sh v0.0.1 
+waitForJobs.sh v${VERSION} 
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
@@ -18,8 +19,8 @@ Usage: waitForJobs.sh [-v|--verbose] [-i|--interval <SECONDS>]
 <JOBS>        : comma-separated list of job IDs. For example 12345,12346
 
 Tip: To capture the job ID of a job submission you can use:
-RETVAL=$(submitjob.sh myJob.sh)
-JOBID=${RETVAL##* }
+RETVAL=\$(submitjob.sh myJob.sh)
+JOBID=\${RETVAL##* }
 
 EOF
  exit $1
@@ -46,6 +47,10 @@ while (( "$#" )); do
     -h|--help)
       usage 0
       shift
+      ;;
+    --version)
+      echo "waitForJobs.sh :: clusterutil v${VERSION}"
+      exit 0
       ;;
     -v|--verbose)
       VERBOSE=1

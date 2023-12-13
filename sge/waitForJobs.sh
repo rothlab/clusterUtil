@@ -1,4 +1,5 @@
 #!/bin/bash
+VERSION="1.0.0"
 
 #helper function to print usage information
 usage () {
@@ -46,6 +47,10 @@ while (( "$#" )); do
     -h|--help)
       usage 0
       shift
+      ;;
+    --version)
+      echo "waitForJobs.sh :: clusterutil v${VERSION}"
+      exit 0
       ;;
     -v|--verbose)
       VERBOSE=1

@@ -1,4 +1,5 @@
 #!/bin/bash 
+VERSION="1.0.0"
 
 #DEFAULT PARAMETERS
 #change as desired below
@@ -21,7 +22,7 @@ SCRIPT=${LOGDIR}/${JOBNAME}.sh
 usage () {
   cat << EOF
 
-submitjob.sh v0.1.0
+submitjob.sh v${VERSION}
 
 by Jochen Weile <jochenweile@gmail.com> 2021
 
@@ -78,6 +79,10 @@ while (( "$#" )); do
     -h|--help)
       usage 0
       shift
+      ;;
+    --version)
+      echo "submitjob.sh :: clusterutil v${VERSION}"
+      exit 0
       ;;
     -t|--time)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
