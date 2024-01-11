@@ -1,4 +1,16 @@
 #!/bin/bash 
+
+#fail on error, even within pipes; require variable declarations, disable history tracking
+set -eEuo pipefail +H
+#if an error occurred, print where it happened
+function handle_error {
+  local retval=$?
+  local line=$1
+  echo "Failed at $line: $BASH_COMMAND"
+  exit $retval
+}
+trap 'handle_error $LINENO' ERR
+
 VERSION="1.0.0"
 
 #DEFAULT PARAMETERS
@@ -6,13 +18,15 @@ VERSION="1.0.0"
 LOGDIR=$HOME/slurmlogs
 TIME="01:00:00"
 DATETIME=$(date +%Y%m%d%H%M%S)
-ALPHATAG=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 8)
+ALPHATAG=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 8||true)
 JOBNAME="${USER}_${DATETIME}_$ALPHATAG"
 CPUS="1"
 MEM="1G"
 BLACKLIST=""
 QUEUE=""
 DOREPORT=0
+CONDAENV=""
+SKIPVALIDATION=""
 
 LOG=${LOGDIR}/${JOBNAME}.out
 ERRLOG=${LOGDIR}/${JOBNAME}.err
@@ -218,6 +232,7 @@ mkdir -p $LOGDIR
 
 #write the slurm submission script
 echo "#!/bin/bash">$SCRIPT
+echo "set -eEuo pipefail +H">>$SCRIPT
 echo "#SBATCH --time=$TIME">>$SCRIPT
 echo "#SBATCH --job-name=$JOBNAME">>$SCRIPT
 echo "#SBATCH --cpus-per-task=$CPUS">>$SCRIPT
@@ -230,6 +245,7 @@ echo "#SBATCH --output=$LOG">>$SCRIPT
 if ! [[ -z $BLACKLIST ]]; then
   echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
+ACTIVATED=""
 if ! [[ -z "$CONDAENV" ]]; then
   #if we're in the base environment, activate the desired new environment
   if [[ -z $CONDA_DEFAULT_ENV || $CONDA_DEFAULT_ENV == "base" ]]; then
