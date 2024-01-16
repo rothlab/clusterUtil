@@ -232,7 +232,6 @@ mkdir -p $LOGDIR
 
 #write the slurm submission script
 echo "#!/bin/bash">$SCRIPT
-echo "set -eEuo pipefail +H">>$SCRIPT
 echo "#SBATCH --time=$TIME">>$SCRIPT
 echo "#SBATCH --job-name=$JOBNAME">>$SCRIPT
 echo "#SBATCH --cpus-per-task=$CPUS">>$SCRIPT
@@ -245,6 +244,7 @@ echo "#SBATCH --output=$LOG">>$SCRIPT
 if ! [[ -z $BLACKLIST ]]; then
   echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
+echo "set -eEuo pipefail +H">>$SCRIPT
 ACTIVATED=""
 if ! [[ -z "$CONDAENV" ]]; then
   #if we're in the base environment, activate the desired new environment
