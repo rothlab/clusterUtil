@@ -245,6 +245,9 @@ if ! [[ -z $BLACKLIST ]]; then
   echo "#SBATCH --exclude=$BLACKLIST">>$SCRIPT
 fi
 echo "set -eEuo pipefail +H">>$SCRIPT
+if [[ "$DOREPORT" == 1 ]]; then
+  echo 'echo "Running on node $HOSTNAME"'>>$SCRIPT
+fi
 ACTIVATED=""
 if ! [[ -z "$CONDAENV" ]]; then
   #if we're in the base environment, activate the desired new environment
