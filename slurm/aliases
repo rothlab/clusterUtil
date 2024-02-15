@@ -1,10 +1,14 @@
 # >>> clusterUtil >>>
+
+#function to delete logs older than 2 weeks
 cleanSlurmLogs() {
   LOGDIR=$HOME/slurmlogs
   DAYS=${1:-13}
   find $LOGDIR -type f -mtime +$DAYS -delete
 }
 
+#function to "login" to a worker node
+#can provide name of desired node as argument
 slogin() {
   if [[ -z $1 ]]; then
     srun --pty bash
@@ -12,6 +16,7 @@ slogin() {
     srun --pty -w $1 /bin/bash
   fi
 }
+
 
 alias deleteallmyjobs="scancel -u $USER"
 
@@ -25,5 +30,47 @@ function qstat() {
   echo "You probably meant squeue 😅 ..."
   squeue $@
 }
+
+
+#Semaphore function
+createSemaphore(){
+  CAPACITY="${1:-10}"
+  SEMADIR="$HOME/.sema"
+  mkdir -p "$SEMADIR"
+  SEMAFILE=$(mktemp -p "$SEMADIR")
+  echo "${CAPACITY}">"${SEMAFILE}"
+  echo "$SEMAFILE"
+}
+
+#acquire or release a resource token from the semaphore
+#if no token is available, wait until it is.
+.modifySemaphore() {
+  SEMAFILE="$1"
+  INCREMENT="${2:--1}"
+  if [[ ! -e "$SEMAFILE" ]]; then
+    echo "Semaphore file $1 does not exist!">&2
+    exit 1
+  fi
+  while #use while in do-while fashion
+    {
+      flock 9
+      CAPACITY=$(cat "$SEMAFILE")
+      echo "$$ acquired lock $SEMAFILE"
+      if (( CAPACITY+INCREMENT >= 0 )); then
+        echo "$((CAPACITY+INCREMENT))">"$SEMAFILE"
+        false
+      else 
+        true
+      fi
+    } 9<"$SEMAFILE"
+  do 
+    echo "Waiting for resources"
+    sleep 5
+  done
+}
+
+acquireSemaphore() { .modifySemaphore "$1" "-1" ; }
+releaseSemaphore() { .modifySemaphore "$1" "1" ; }
+
 
 # <<< clusterUtil <<<
