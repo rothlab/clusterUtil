@@ -24,7 +24,7 @@ alias listnodes="sinfo -Nl"
 
 alias showjob="scontrol show job"
 
-alias myjobs="squeue -u jweile -o '%.10i %.12j %.6C %.8m %.8T %.10M %10l %R'"
+alias myjobs="squeue -u $USER -o '%.10i %.12j %.6C %.8m %.8T %.10M %10l %R'"
 
 function qstat() {
   echo "You probably meant squeue 😅 ..."
